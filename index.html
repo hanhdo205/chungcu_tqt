@@ -110,18 +110,21 @@
 <body>
 
 <!-- ╔══════════════════════════════════════════════════════════════╗
-     ║  CẤU HÌNH — Thay đổi 2 dòng dưới đây cho phù hợp         ║
+     ║  CẤU HÌNH — Chỉ cần dán URL Apps Script vào dòng dưới     ║
      ╚══════════════════════════════════════════════════════════════╝ -->
 <script>
   // 1) Dán URL Google Apps Script deployment vào đây:
   window.__SCRIPT_URL__ = "";
   // VD: window.__SCRIPT_URL__ = "https://script.google.com/macros/s/AKfycbyqlUdA2GVBDQGJ4rjYtYIwTI-EB--bKw86eN1d510YCKA6q6NnRJIZHSgGTbvifYTc/exec";
 
-  // 2) Tháng hiện tại (cập nhật mỗi tháng):
-  window.__MONTH__ = "04/2026";
-
-  // 3) Hạn chót:
-  window.__DEADLINE__ = "06/04/2026";
+  // 2) Tháng & hạn chót — tự động theo tháng hiện tại:
+  (function() {
+    var now = new Date();
+    var m = String(now.getMonth() + 1).padStart(2, '0');
+    var y = now.getFullYear();
+    window.__MONTH__ = m + '/' + y;
+    window.__DEADLINE__ = '06/' + m + '/' + y; // Đổi 06 thành ngày khác nếu cần
+  })();
 </script>
 
 <div id="app"></div>
@@ -239,7 +242,7 @@ function renderResident() {
       <div class="card">
         <div class="big-label">Nhập chỉ số đồng hồ nước</div>
         <input class="big-input" type="number" inputmode="numeric" pattern="[0-9]*" id="readingInput"
-               placeholder="VD: 1234" value="${reading}" oninput="state.reading=this.value" autofocus>
+               placeholder="VD: 1234" value="${reading}" oninput="state.reading=this.value;document.getElementById('submitBtn').disabled=!this.value.trim()" autofocus>
         <div class="input-hint">Ghi đúng số trên mặt đồng hồ nước nhà bạn</div>
         <button class="submit-btn" id="submitBtn" onclick="handleSubmit()" ${!reading.trim() ? 'disabled' : ''}>
           ${status === "submitting" ? "Đang gửi..." : "GỬI CHỈ SỐ NƯỚC"}
@@ -330,22 +333,37 @@ async function handleSubmit() {
   render();
 
   const scriptUrl = window.__SCRIPT_URL__;
-  if (scriptUrl) {
-    try {
-      await fetch(scriptUrl, {
-        method: "POST",
-        mode: "no-cors",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          room: state.room,
-          reading: val,
-          month: window.__MONTH__,
-          timestamp: new Date().toISOString(),
-        }),
-      });
-    } catch (e) { /* no-cors */ }
+  if (!scriptUrl) {
+    state.errorMsg = "Chưa cấu hình URL Google Apps Script!";
+    state.status = "error";
+    render();
+    return;
   }
-  setTimeout(() => { state.status = "success"; render(); }, 700);
+
+  try {
+    const res = await fetch(scriptUrl, {
+      method: "POST",
+      redirect: "follow",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify({
+        room: state.room,
+        reading: val,
+        month: window.__MONTH__,
+        timestamp: new Date().toISOString(),
+      }),
+    });
+    const result = await res.json();
+    if (result.status === "ok") {
+      state.status = "success";
+    } else {
+      state.errorMsg = result.message || "Có lỗi xảy ra!";
+      state.status = "error";
+    }
+  } catch (e) {
+    state.errorMsg = "Không thể kết nối server. Vui lòng thử lại!";
+    state.status = "error";
+  }
+  render();
 }
 
 // ─── Admin ───
@@ -372,29 +390,98 @@ function renderAdmin() {
           ${showInstructions ? "▼" : "▶"} Hướng dẫn cài đặt Google Sheets
         </button>
         ${showInstructions ? `<div class="instructions">
-          <p><strong>Bước 1:</strong> Mở Google Sheets mới → Extensions → Apps Script</p>
-          <p><strong>Bước 2:</strong> Xóa code mặc định, dán đoạn này vào:</p>
-          <pre>function doPost(e) {
+          <p><strong>Bước 1:</strong> Mở Google Sheets mới → đặt tên các cột ở hàng 1:</p>
+          <p><code>Số phòng | Chỉ số cũ | Chỉ số mới | Tiêu thụ | Ngày cập nhật | Tháng</code></p>
+          <p><strong>Bước 2:</strong> Vào Extensions → Apps Script → xóa code mặc định, dán đoạn này:</p>
+          <pre>/* --- Chạy hàm này 1 lần để tạo danh sách phòng --- */
+function initRooms() {
+  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  sheet.getRange("A1:F1").setValues([[
+    "So phong","Chi so cu","Chi so moi",
+    "Tieu thu","Ngay cap nhat","Thang"
+  ]]);
+  var blocks = {A:{floors:[1,2,3,4],n:6},
+    B:{floors:[1,2,3,4],n:10},
+    C:{floors:[1,2,3,4],n:22}};
+  var row = 2;
+  for (var b in blocks) {
+    var info = blocks[b];
+    for (var fi=0; fi&lt;info.floors.length; fi++) {
+      for (var i=1; i&lt;=info.n; i++) {
+        sheet.getRange(row,1).setValue(
+          b+"-"+info.floors[fi]+String(i).padStart(2,"0"));
+        row++;
+      }
+    }
+  }
+}
+
+/* --- Nhan du lieu tu web --- */
+function doPost(e) {
   var data = JSON.parse(e.postData.contents);
   var sheet = SpreadsheetApp.getActiveSpreadsheet()
               .getActiveSheet();
-  sheet.appendRow([
-    data.timestamp,
-    data.room,
-    data.reading,
-    data.month
-  ]);
-  return ContentService
-    .createTextOutput(
-      JSON.stringify({status: "ok"})
-    )
+  var rooms = sheet.getRange("A:A").getValues();
+
+  // Tim dong cua phong
+  var row = -1;
+  for (var i=1; i&lt;rooms.length; i++) {
+    if (rooms[i][0] === data.room) { row = i+1; break; }
+  }
+  if (row === -1) {
+    return ContentService.createTextOutput(
+      JSON.stringify({status:"error",
+        message:"Khong tim thay phong "+data.room}))
+      .setMimeType(ContentService.MimeType.JSON);
+  }
+
+  // Kiem tra 20 ngay
+  var lastUpdate = sheet.getRange(row, 5).getValue();
+  if (lastUpdate) {
+    var days = (new Date() - new Date(lastUpdate))
+               / 86400000;
+    if (days &lt; 20) {
+      var left = Math.ceil(20 - days);
+      return ContentService.createTextOutput(
+        JSON.stringify({status:"error",
+          message:"Phong "+data.room
+          +" da ghi roi. Doi "+left+" ngay nua."}))
+        .setMimeType(ContentService.MimeType.JSON);
+    }
+  }
+
+  // Chuyen: chi so moi -> cu
+  var curNew = sheet.getRange(row, 3).getValue();
+  if (curNew !== "") {
+    sheet.getRange(row, 2).setValue(curNew);
+  }
+
+  // Ghi chi so moi
+  sheet.getRange(row, 3).setValue(data.reading);
+
+  // Tinh tieu thu
+  var oldVal = sheet.getRange(row, 2).getValue();
+  if (oldVal !== "") {
+    sheet.getRange(row, 4).setValue(data.reading - oldVal);
+  }
+
+  // Cap nhat ngay va thang
+  sheet.getRange(row, 5).setValue(
+    new Date().toISOString());
+  sheet.getRange(row, 6).setValue(data.month);
+
+  return ContentService.createTextOutput(
+    JSON.stringify({status:"ok",
+      message:"Ghi thanh cong!"}))
     .setMimeType(ContentService.MimeType.JSON);
 }</pre>
-          <p><strong>Bước 3:</strong> Deploy → New deployment → Web app</p>
-          <p>• Execute as: <strong>Me</strong></p>
-          <p>• Who has access: <strong>Anyone</strong></p>
-          <p><strong>Bước 4:</strong> Copy URL deployment → mở file <code>index.html</code> → dán vào dòng <code>window.__SCRIPT_URL__</code></p>
-          <p><strong>Bước 5:</strong> Mỗi tháng mới, đổi <code>window.__MONTH__</code> và <code>window.__DEADLINE__</code></p>
+          <p><strong>Bước 3:</strong> Bấm <strong>Run</strong> → chọn hàm <code>initRooms</code> → chạy 1 lần để tạo 152 phòng</p>
+          <p><strong>Bước 4:</strong> Deploy → New deployment → Web app</p>
+          <p>• Execute as: <strong>Me</strong> — Who has access: <strong>Anyone</strong></p>
+          <p><strong>Bước 5:</strong> Copy URL deployment → dán vào <code>window.__SCRIPT_URL__</code> trong file HTML</p>
+          <p style="margin-top:12px;padding:10px;background:#FFF7ED;border-radius:8px;border:1px solid #FED7AA">
+            💡 <strong>Cách hoạt động:</strong> Khi cư dân gửi số mới → chỉ số mới hiện tại tự chuyển sang cột "chỉ số cũ" → số vừa nhập ghi vào "chỉ số mới" → cột "tiêu thụ" tự tính. Nếu chưa đủ 20 ngày kể từ lần ghi trước → từ chối và báo số ngày còn lại.
+          </p>
         </div>` : ""}
       </div>
 
