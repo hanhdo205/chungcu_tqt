@@ -113,9 +113,8 @@
      ║  CẤU HÌNH — Chỉ cần dán URL Apps Script vào dòng dưới     ║
      ╚══════════════════════════════════════════════════════════════╝ -->
 <script>
-  // 1) Dán URL Google Apps Script deployment vào đây:
+  // 1) URL Google Apps Script deployment:
   window.__SCRIPT_URL__ = "https://script.google.com/macros/s/AKfycbyqlUdA2GVBDQGJ4rjYtYIwTI-EB--bKw86eN1d510YCKA6q6NnRJIZHSgGTbvifYTc/exec";
-  // VD: window.__SCRIPT_URL__ = "https://script.google.com/macros/s/AKfycbyqlUdA2GVBDQGJ4rjYtYIwTI-EB--bKw86eN1d510YCKA6q6NnRJIZHSgGTbvifYTc/exec";
 
   // 2) Tháng & hạn chót — tự động theo tháng hiện tại:
   (function() {
@@ -242,9 +241,9 @@ function renderResident() {
       <div class="card">
         <div class="big-label">Nhập chỉ số đồng hồ nước</div>
         <input class="big-input" type="tel" inputmode="numeric" pattern="[0-9]*" id="readingInput"
-               placeholder="VD: 1234" value="${reading}" oninput="state.reading=this.value" autofocus>
+               placeholder="VD: 1234" value="${reading}" autofocus>
         <div class="input-hint">Ghi đúng số trên mặt đồng hồ nước nhà bạn</div>
-        <button class="submit-btn" id="submitBtn" onclick="handleSubmit()">
+        <button class="submit-btn" id="submitBtn" onclick="handleSubmit()" disabled>
           ${status === "submitting" ? "Đang gửi..." : "GỬI CHỈ SỐ NƯỚC"}
         </button>
       </div>`;
@@ -298,9 +297,23 @@ function renderResident() {
 
   app().innerHTML = headerHTML + `<div class="body">${bodyHTML}</div>`;
 
-  // Auto-focus input
+  // Auto-focus input & bind events
   const inp = document.getElementById("readingInput");
-  if (inp) inp.focus();
+  const btn = document.getElementById("submitBtn");
+  if (inp && btn) {
+    inp.focus();
+    // Enable/disable button khi nhap
+    var updateBtn = function() {
+      state.reading = inp.value;
+      var hasVal = inp.value.trim().length > 0;
+      btn.disabled = !hasVal;
+      btn.style.background = hasVal ? "var(--primary)" : "var(--border)";
+    };
+    inp.addEventListener("input", updateBtn);
+    inp.addEventListener("keyup", updateBtn);
+    // Neu da co gia tri (quay lai tu loi)
+    if (inp.value.trim()) updateBtn();
+  }
 }
 
 function goBack() {
@@ -322,7 +335,7 @@ function resetForm() {
 }
 
 async function handleSubmit() {
-  // Lay gia tri truc tiep tu input (khong phu thuoc state)
+  // Lay gia tri truc tiep tu input
   var inp = document.getElementById("readingInput");
   if (inp) state.reading = inp.value;
   
@@ -351,17 +364,12 @@ async function handleSubmit() {
   }
 
   try {
-    const res = await fetch(scriptUrl, {
-      method: "POST",
-      redirect: "follow",
-      headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify({
-        room: state.room,
-        reading: val,
-        month: window.__MONTH__,
-        timestamp: new Date().toISOString(),
-      }),
+    const params = new URLSearchParams({
+      room: state.room,
+      reading: val,
+      month: window.__MONTH__,
     });
+    const res = await fetch(scriptUrl + "?" + params.toString());
     const result = await res.json();
     if (result.status === "ok") {
       state.status = "success";
@@ -403,9 +411,10 @@ function renderAdmin() {
           <p><strong>Bước 1:</strong> Mở Google Sheets mới → đặt tên các cột ở hàng 1:</p>
           <p><code>Số phòng | Chỉ số cũ | Chỉ số mới | Tiêu thụ | Ngày cập nhật | Tháng</code></p>
           <p><strong>Bước 2:</strong> Vào Extensions → Apps Script → xóa code mặc định, dán đoạn này:</p>
-          <pre>/* --- Chạy hàm này 1 lần để tạo danh sách phòng --- */
+          <pre>/* --- Chay 1 lan de tao danh sach phong --- */
 function initRooms() {
-  var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+  var sheet = SpreadsheetApp.getActiveSpreadsheet()
+              .getActiveSheet();
   sheet.getRange("A1:F1").setValues([[
     "So phong","Chi so cu","Chi so moi",
     "Tieu thu","Ngay cap nhat","Thang"
@@ -419,75 +428,86 @@ function initRooms() {
     for (var fi=0; fi&lt;info.floors.length; fi++) {
       for (var i=1; i&lt;=info.n; i++) {
         sheet.getRange(row,1).setValue(
-          b+"-"+info.floors[fi]+String(i).padStart(2,"0"));
+          b+"-"+info.floors[fi]
+          +String(i).padStart(2,"0"));
         row++;
       }
     }
   }
 }
 
-/* --- Nhan du lieu tu web --- */
-function doPost(e) {
-  var data = JSON.parse(e.postData.contents);
+/* --- Xu ly ghi so nuoc --- */
+function processRequest(room, reading, month) {
   var sheet = SpreadsheetApp.getActiveSpreadsheet()
               .getActiveSheet();
   var rooms = sheet.getRange("A:A").getValues();
 
-  // Tim dong cua phong
   var row = -1;
   for (var i=1; i&lt;rooms.length; i++) {
-    if (rooms[i][0] === data.room) { row = i+1; break; }
+    if (rooms[i][0] === room) { row=i+1; break; }
   }
   if (row === -1) {
-    return ContentService.createTextOutput(
-      JSON.stringify({status:"error",
-        message:"Khong tim thay phong "+data.room}))
-      .setMimeType(ContentService.MimeType.JSON);
+    return {status:"error",
+      message:"Khong tim thay phong "+room};
   }
 
   // Kiem tra 20 ngay
-  var lastUpdate = sheet.getRange(row, 5).getValue();
-  if (lastUpdate) {
-    var days = (new Date() - new Date(lastUpdate))
-               / 86400000;
+  var last = sheet.getRange(row, 5).getValue();
+  if (last) {
+    var days = (new Date()-new Date(last))/86400000;
     if (days &lt; 20) {
-      var left = Math.ceil(20 - days);
-      return ContentService.createTextOutput(
-        JSON.stringify({status:"error",
-          message:"Phong "+data.room
-          +" da ghi roi. Doi "+left+" ngay nua."}))
-        .setMimeType(ContentService.MimeType.JSON);
+      return {status:"error",
+        message:"Phong "+room+" da ghi roi. Doi "
+        +Math.ceil(20-days)+" ngay nua."};
     }
   }
 
-  // Chuyen: chi so moi -> cu
+  // Chuyen chi so moi -> cu
   var curNew = sheet.getRange(row, 3).getValue();
   if (curNew !== "") {
     sheet.getRange(row, 2).setValue(curNew);
   }
 
-  // Ghi chi so moi
-  sheet.getRange(row, 3).setValue(data.reading);
-
-  // Tinh tieu thu
+  // Ghi chi so moi + tinh tieu thu
+  sheet.getRange(row, 3).setValue(Number(reading));
   var oldVal = sheet.getRange(row, 2).getValue();
   if (oldVal !== "") {
-    sheet.getRange(row, 4).setValue(data.reading - oldVal);
+    sheet.getRange(row, 4).setValue(
+      Number(reading) - oldVal);
   }
 
-  // Cap nhat ngay va thang
+  // Cap nhat ngay + thang
   sheet.getRange(row, 5).setValue(
     new Date().toISOString());
-  sheet.getRange(row, 6).setValue(data.month);
+  sheet.getRange(row, 6).setValue(month);
 
+  return {status:"ok",message:"Ghi thanh cong!"};
+}
+
+/* --- Nhan tu web (GET) --- */
+function doGet(e) {
+  var result = processRequest(
+    e.parameter.room,
+    e.parameter.reading,
+    e.parameter.month);
   return ContentService.createTextOutput(
-    JSON.stringify({status:"ok",
-      message:"Ghi thanh cong!"}))
+    JSON.stringify(result))
+    .setMimeType(ContentService.MimeType.JSON);
+}
+
+/* --- Du phong (POST) --- */
+function doPost(e) {
+  var d = JSON.parse(e.postData.contents);
+  var result = processRequest(
+    d.room, d.reading, d.month);
+  return ContentService.createTextOutput(
+    JSON.stringify(result))
     .setMimeType(ContentService.MimeType.JSON);
 }</pre>
-          <p><strong>Bước 3:</strong> Bấm <strong>Run</strong> → chọn hàm <code>initRooms</code> → chạy 1 lần để tạo 152 phòng</p>
+          <p><strong>Bước 3:</strong> Chọn hàm <code>initRooms</code> → bấm Run ▶ (chỉ cần 1 lần để tạo 152 phòng)</p>
           <p><strong>Bước 4:</strong> Deploy → New deployment → Web app</p>
           <p>• Execute as: <strong>Me</strong> — Who has access: <strong>Anyone</strong></p>
+          <p>⚠️ Nếu đã deploy trước đó: Deploy → <strong>Manage deployments</strong> → bấm ✏️ → Version: <strong>New version</strong> → Deploy</p>
           <p><strong>Bước 5:</strong> Copy URL deployment → dán vào <code>window.__SCRIPT_URL__</code> trong file HTML</p>
           <p style="margin-top:12px;padding:10px;background:#FFF7ED;border-radius:8px;border:1px solid #FED7AA">
             💡 <strong>Cách hoạt động:</strong> Khi cư dân gửi số mới → chỉ số mới hiện tại tự chuyển sang cột "chỉ số cũ" → số vừa nhập ghi vào "chỉ số mới" → cột "tiêu thụ" tự tính. Nếu chưa đủ 20 ngày kể từ lần ghi trước → từ chối và báo số ngày còn lại.
