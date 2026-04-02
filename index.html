@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Ghi Số Nước</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  body { font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; background: #EFF6FF; color: #1E293B; min-height: 100vh; }
+  
+  /* ── Variables ── */
+  :root {
+    --primary: #1D4ED8; --primary-hover: #1E40AF; --primary-light: #DBEAFE;
+    --success: #059669; --success-bg: #D1FAE5;
+    --danger: #DC2626; --muted: #64748B; --border: #CBD5E1;
+    --purple: #7C3AED; --purple-light: #EDE9FE;
+    --radius: 16px; --radius-sm: 12px;
+  }
+
+  /* ── Header ── */
+  .header { background: linear-gradient(135deg, var(--primary), #2563EB); color: #fff; padding: 20px 16px; text-align: center; position: relative; }
+  .header.admin { background: linear-gradient(135deg, var(--purple), #6D28D9); }
+  .header.success-hdr { background: linear-gradient(135deg, var(--success), #10B981); }
+  .header h1 { font-size: 22px; font-weight: 800; letter-spacing: 0.5px; }
+  .header-sub { font-size: 14px; opacity: 0.85; margin-top: 4px; }
+  .back-btn { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); background: none; border: none; color: #fff; font-size: 16px; cursor: pointer; padding: 8px; opacity: 0.9; }
+  .mode-btn { position: absolute; right: 12px; top: 50%; transform: translateY(-50%); background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); color: #fff; font-size: 12px; padding: 6px 12px; border-radius: 8px; cursor: pointer; }
+
+  /* ── Layout ── */
+  .body { padding: 16px; max-width: 480px; margin: 0 auto; }
+  .body.wide { max-width: 640px; }
+  .card { background: #fff; border-radius: 20px; padding: 20px; margin-bottom: 16px; box-shadow: 0 2px 12px rgba(0,0,0,0.06); }
+
+  /* ── Labels ── */
+  .label { font-size: 15px; font-weight: 600; color: var(--muted); margin-bottom: 8px; }
+  .big-label { font-size: 18px; font-weight: 700; text-align: center; margin-bottom: 12px; }
+  .tag { display: inline-block; background: var(--primary-light); color: var(--primary); font-weight: 700; font-size: 20px; padding: 8px 20px; border-radius: var(--radius-sm); }
+  .tag.sm { font-size: 14px; padding: 4px 12px; }
+  .tag.purple { background: var(--purple-light); color: var(--purple); }
+
+  /* ── Buttons ── */
+  .btn-row { display: flex; gap: 12px; }
+  .btn-grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+  .btn-grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+
+  .block-btn { flex: 1; padding: 18px 8px; font-size: 28px; font-weight: 800; border: 3px solid var(--border); border-radius: var(--radius); background: #fff; color: #1E293B; cursor: pointer; transition: all 0.15s; }
+  .block-btn:active { border-color: var(--primary); background: var(--primary-light); color: var(--primary); transform: scale(0.97); }
+
+  .floor-btn { flex: 1; padding: 16px 8px; font-size: 24px; font-weight: 700; border: 3px solid var(--border); border-radius: 14px; background: #fff; cursor: pointer; transition: all 0.15s; }
+  .floor-btn:active { border-color: var(--primary); background: var(--primary-light); color: var(--primary); }
+
+  .room-btn { padding: 14px 6px; font-size: 17px; font-weight: 700; border: 2px solid var(--border); border-radius: var(--radius-sm); background: #fff; cursor: pointer; transition: all 0.15s; text-align: center; }
+  .room-btn:active { border-color: var(--primary); background: var(--primary); color: #fff; }
+
+  /* ── Input ── */
+  .big-input { width: 100%; padding: 20px 16px; font-size: 32px; font-weight: 700; border: 3px solid var(--border); border-radius: var(--radius); text-align: center; outline: none; letter-spacing: 2px; color: #1E293B; background: #fff; }
+  .big-input:focus { border-color: var(--primary); box-shadow: 0 0 0 4px rgba(29,78,216,0.1); }
+  .input-hint { font-size: 13px; color: var(--muted); text-align: center; margin-top: 8px; }
+
+  .sm-input { width: 100%; padding: 12px; font-size: 14px; border: 2px solid var(--border); border-radius: 10px; outline: none; }
+  .sm-input:focus { border-color: var(--purple); }
+
+  /* ── Submit ── */
+  .submit-btn { width: 100%; padding: 20px; font-size: 22px; font-weight: 800; border: none; border-radius: var(--radius); background: var(--primary); color: #fff; cursor: pointer; transition: all 0.15s; margin-top: 12px; }
+  .submit-btn:active { transform: scale(0.98); }
+  .submit-btn:disabled { background: var(--border); cursor: not-allowed; }
+  .submit-btn.green { background: var(--success); }
+  .submit-btn.purple { background: var(--purple); font-size: 16px; font-weight: 700; padding: 16px; }
+
+  /* ── Progress ── */
+  .progress { display: flex; justify-content: center; gap: 8px; margin-top: 8px; }
+  .dot { height: 10px; border-radius: 5px; background: var(--border); transition: all 0.3s; }
+  .dot.active { background: var(--primary); }
+
+  /* ── Success ── */
+  .success-box { text-align: center; padding: 40px 20px; }
+  .success-icon { width: 80px; height: 80px; border-radius: 50%; background: var(--success-bg); display: flex; align-items: center; justify-content: center; margin: 0 auto 20px; font-size: 40px; }
+
+  /* ── Admin ── */
+  .admin-block-btn { flex: 1; padding: 10px; font-size: 15px; font-weight: 700; border: 2px solid var(--border); border-radius: 10px; background: #fff; cursor: pointer; }
+  .admin-block-btn.active { border-color: var(--purple); background: var(--purple-light); color: var(--purple); }
+  .admin-floor-btn { flex: 1; padding: 8px; font-size: 14px; font-weight: 600; border: 2px solid var(--border); border-radius: 8px; background: #fff; cursor: pointer; }
+  .admin-floor-btn.active { border-color: var(--purple); background: var(--purple-light); color: var(--purple); }
+
+  .qr-card { border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 10px; text-align: center; background: #FAFBFF; }
+  .qr-card .room-label { font-weight: 800; font-size: 15px; color: var(--purple); margin-bottom: 4px; }
+  .qr-card img { width: 100%; max-width: 120px; height: auto; border-radius: 4px; }
+  .qr-card .qr-hint { font-size: 9px; color: var(--muted); margin-top: 4px; }
+
+  /* ── Instructions ── */
+  .instructions { margin-top: 12px; font-size: 13px; line-height: 1.7; }
+  .instructions p { margin-bottom: 6px; }
+  .instructions pre { background: #F1F5F9; padding: 12px; border-radius: 8px; font-size: 11px; overflow: auto; white-space: pre-wrap; margin: 8px 0; }
+  .toggle-btn { background: none; border: none; cursor: pointer; font-size: 15px; font-weight: 700; color: var(--purple); padding: 0; }
+
+  /* ── Print All ── */
+  .print-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .print-qr { border: 1px solid var(--border); border-radius: 8px; padding: 8px; text-align: center; page-break-inside: avoid; }
+  .print-qr .room-label { font-weight: 800; font-size: 16px; color: var(--primary); margin-bottom: 4px; }
+  .print-qr img { width: 120px; height: 120px; }
+  .print-qr .qr-hint { font-size: 9px; color: var(--muted); margin-top: 2px; }
+  .print-toolbar { margin-bottom: 16px; display: flex; gap: 8px; }
+  .print-back { padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border); cursor: pointer; background: #fff; }
+  .print-btn { padding: 8px 24px; border-radius: 8px; border: none; background: var(--primary); color: #fff; font-weight: 700; cursor: pointer; }
+
+  .hidden { display: none; }
+  @media print { .no-print { display: none !important; } }
+</style>
+</head>
+<body>
+
+<!-- ╔══════════════════════════════════════════════════════════════╗
+     ║  CẤU HÌNH — Thay đổi 2 dòng dưới đây cho phù hợp         ║
+     ╚══════════════════════════════════════════════════════════════╝ -->
+<script>
+  // 1) Dán URL Google Apps Script deployment vào đây:
+  window.__SCRIPT_URL__ = "";
+  // VD: window.__SCRIPT_URL__ = "https://script.google.com/macros/s/AKfyc.../exec";
+
+  // 2) Tháng hiện tại (cập nhật mỗi tháng):
+  window.__MONTH__ = "04/2026";
+
+  // 3) Hạn chót:
+  window.__DEADLINE__ = "06/04/2026";
+</script>
+
+<div id="app"></div>
+
+<script>
+// ─── Data ───
+const BLOCKS = {
+  A: { floors: [1,2,3,4], perFloor: 6 },
+  B: { floors: [1,2,3,4], perFloor: 10 },
+  C: { floors: [1,2,3,4], perFloor: 22 },
+};
+const QR_API = "https://api.qrserver.com/v1/create-qr-code/";
+
+function getRooms(block, floor) {
+  const n = BLOCKS[block].perFloor;
+  return Array.from({length: n}, (_, i) => `${block}-${floor}${String(i+1).padStart(2,'0')}`);
+}
+function getAllRooms() {
+  return Object.keys(BLOCKS).flatMap(b => BLOCKS[b].floors.flatMap(f => getRooms(b, f)));
+}
+function getTotalRooms() {
+  return Object.values(BLOCKS).reduce((s, b) => s + b.floors.length * b.perFloor, 0);
+}
+
+// ─── URL Param ───
+function getRoomFromURL() {
+  const params = new URLSearchParams(window.location.search);
+  const r = params.get("room");
+  return (r && /^[A-C]-\d{3}$/.test(r)) ? r : null;
+}
+
+// ─── App State ───
+const state = {
+  mode: "resident",      // resident | admin | printAll
+  block: null,
+  floor: null,
+  room: getRoomFromURL(),
+  reading: "",
+  status: "idle",        // idle | submitting | success | error
+  errorMsg: "",
+  lockedRoom: getRoomFromURL(),
+  // Admin
+  baseUrl: window.location.origin + window.location.pathname,
+  viewBlock: "A",
+  viewFloor: 1,
+  showInstructions: false,
+};
+
+// ─── Render Engine ───
+const $ = (sel) => document.querySelector(sel);
+const app = () => document.getElementById("app");
+
+function render() {
+  if (state.mode === "printAll") return renderPrintAll();
+  if (state.mode === "admin") return renderAdmin();
+  renderResident();
+}
+
+// ─── Resident ───
+function renderResident() {
+  const { block, floor, room, reading, status, errorMsg, lockedRoom } = state;
+  const MONTH = window.__MONTH__;
+  const DEADLINE = window.__DEADLINE__;
+
+  if (status === "success") {
+    app().innerHTML = `
+      <div class="header success-hdr"><h1>✅ GHI SỐ NƯỚC</h1></div>
+      <div class="body">
+        <div class="card success-box">
+          <div class="success-icon">✓</div>
+          <div style="font-size:22px;font-weight:800;color:var(--success);margin-bottom:8px">Gửi thành công!</div>
+          <div style="font-size:16px;color:var(--muted);margin-bottom:20px">Căn <strong>${room}</strong> — Chỉ số: <strong>${reading}</strong></div>
+          <div style="font-size:14px;color:var(--muted);margin-bottom:24px">Cảm ơn bạn đã ghi chỉ số nước tháng ${MONTH}</div>
+          <button class="submit-btn green" onclick="resetForm()">${lockedRoom ? "Ghi lại" : "Quay về trang chủ"}</button>
+        </div>
+      </div>`;
+    return;
+  }
+
+  if (status === "error") {
+    app().innerHTML = `
+      <div class="header" style="background:linear-gradient(135deg,var(--danger),#EF4444)">
+        <button class="back-btn" onclick="state.status='idle';render()">← Quay lại</button>
+        <h1>GHI SỐ NƯỚC</h1>
+      </div>
+      <div class="body">
+        <div class="card" style="text-align:center;padding:32px">
+          <div style="font-size:48px;margin-bottom:16px">⚠️</div>
+          <div style="font-size:18px;font-weight:700;color:var(--danger);margin-bottom:8px">${errorMsg}</div>
+          <button class="submit-btn" style="background:var(--danger);font-size:18px;margin-top:20px" onclick="state.status='idle';render()">Thử lại</button>
+        </div>
+      </div>`;
+    return;
+  }
+
+  const canGoBack = !lockedRoom && (block || floor || room);
+
+  let headerHTML = `
+    <div class="header">
+      ${canGoBack ? '<button class="back-btn" onclick="goBack()">← Quay lại</button>' : ''}
+      <h1>💧 GHI SỐ NƯỚC</h1>
+      <div class="header-sub">Tháng ${MONTH} — Hạn chót: ${DEADLINE}</div>
+      <button class="mode-btn" onclick="state.mode='admin';render()">⚙ Quản trị</button>
+    </div>`;
+
+  let bodyHTML = "";
+
+  if (room) {
+    // ── Input reading ──
+    bodyHTML = `
+      <div class="card" style="text-align:center">
+        <div style="font-size:14px;color:var(--muted);margin-bottom:4px">Căn hộ</div>
+        <div class="tag">${room}</div>
+      </div>
+      <div class="card">
+        <div class="big-label">Nhập chỉ số đồng hồ nước</div>
+        <input class="big-input" type="number" inputmode="numeric" pattern="[0-9]*" id="readingInput"
+               placeholder="VD: 1234" value="${reading}" oninput="state.reading=this.value" autofocus>
+        <div class="input-hint">Ghi đúng số trên mặt đồng hồ nước nhà bạn</div>
+        <button class="submit-btn" id="submitBtn" onclick="handleSubmit()" ${!reading.trim() ? 'disabled' : ''}>
+          ${status === "submitting" ? "Đang gửi..." : "GỬI CHỈ SỐ NƯỚC"}
+        </button>
+      </div>`;
+  } else if (!block) {
+    // ── Step 1: Block ──
+    bodyHTML = `
+      <div class="card">
+        <div class="big-label">Chọn Block nhà</div>
+        <div class="btn-row">
+          ${Object.keys(BLOCKS).map(b => `<button class="block-btn" onclick="state.block='${b}';render()">Block ${b}</button>`).join("")}
+        </div>
+      </div>
+      <div class="progress">
+        <div class="dot active" style="width:28px"></div>
+        <div class="dot" style="width:10px"></div>
+        <div class="dot" style="width:10px"></div>
+      </div>`;
+  } else if (!floor) {
+    // ── Step 2: Floor ──
+    bodyHTML = `
+      <div class="card">
+        <div style="text-align:center;margin-bottom:8px"><span class="tag sm">Block ${block}</span></div>
+        <div class="big-label">Chọn Tầng</div>
+        <div class="btn-row">
+          ${BLOCKS[block].floors.map(f => `<button class="floor-btn" onclick="state.floor=${f};render()">Tầng ${f}</button>`).join("")}
+        </div>
+      </div>
+      <div class="progress">
+        <div class="dot active" style="width:28px"></div>
+        <div class="dot active" style="width:28px"></div>
+        <div class="dot" style="width:10px"></div>
+      </div>`;
+  } else {
+    // ── Step 3: Room ──
+    const rooms = getRooms(block, floor);
+    const cols = block === "C" ? 4 : 3;
+    bodyHTML = `
+      <div class="card">
+        <div style="text-align:center;margin-bottom:8px"><span class="tag sm">Block ${block} — Tầng ${floor}</span></div>
+        <div class="big-label">Chọn số phòng</div>
+        <div class="btn-grid-${cols}">
+          ${rooms.map(r => `<button class="room-btn" onclick="state.room='${r}';state.reading='';render()">${r}</button>`).join("")}
+        </div>
+      </div>
+      <div class="progress">
+        <div class="dot active" style="width:28px"></div>
+        <div class="dot active" style="width:28px"></div>
+        <div class="dot active" style="width:28px"></div>
+      </div>`;
+  }
+
+  app().innerHTML = headerHTML + `<div class="body">${bodyHTML}</div>`;
+
+  // Auto-focus input
+  const inp = document.getElementById("readingInput");
+  if (inp) inp.focus();
+}
+
+function goBack() {
+  if (state.room) { state.room = null; state.reading = ""; }
+  else if (state.floor) state.floor = null;
+  else if (state.block) state.block = null;
+  render();
+}
+
+function resetForm() {
+  if (state.lockedRoom) {
+    state.reading = "";
+    state.status = "idle";
+  } else {
+    state.block = null; state.floor = null; state.room = null;
+    state.reading = ""; state.status = "idle";
+  }
+  render();
+}
+
+async function handleSubmit() {
+  const val = parseInt(state.reading.trim());
+  if (isNaN(val) || val < 0) {
+    state.errorMsg = "Chỉ số không hợp lệ!";
+    state.status = "error";
+    render();
+    return;
+  }
+  state.status = "submitting";
+  render();
+
+  const scriptUrl = window.__SCRIPT_URL__;
+  if (scriptUrl) {
+    try {
+      await fetch(scriptUrl, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          room: state.room,
+          reading: val,
+          month: window.__MONTH__,
+          timestamp: new Date().toISOString(),
+        }),
+      });
+    } catch (e) { /* no-cors */ }
+  }
+  setTimeout(() => { state.status = "success"; render(); }, 700);
+}
+
+// ─── Admin ───
+function renderAdmin() {
+  const { baseUrl, viewBlock, viewFloor, showInstructions } = state;
+  const rooms = getRooms(viewBlock, viewFloor);
+  const qrUrl = (r) => `${QR_API}?size=200x200&data=${encodeURIComponent(baseUrl + "?room=" + r)}`;
+
+  app().innerHTML = `
+    <div class="header admin">
+      <button class="back-btn" onclick="state.mode='resident';render()">← Quay lại</button>
+      <h1>⚙ QUẢN TRỊ</h1>
+      <div class="header-sub">Tạo mã QR cho từng căn hộ</div>
+    </div>
+    <div class="body wide">
+      <div class="card">
+        <div class="label">🔗 Địa chỉ trang web (sau khi host)</div>
+        <input class="sm-input" value="${baseUrl}" oninput="state.baseUrl=this.value" placeholder="https://your-domain.com/water">
+        <div style="font-size:12px;color:var(--muted);margin-top:6px">Mỗi QR sẽ trỏ đến: <code>${baseUrl}?room=A-101</code></div>
+      </div>
+
+      <div class="card">
+        <button class="toggle-btn" onclick="state.showInstructions=!state.showInstructions;render()">
+          ${showInstructions ? "▼" : "▶"} Hướng dẫn cài đặt Google Sheets
+        </button>
+        ${showInstructions ? `<div class="instructions">
+          <p><strong>Bước 1:</strong> Mở Google Sheets mới → Extensions → Apps Script</p>
+          <p><strong>Bước 2:</strong> Xóa code mặc định, dán đoạn này vào:</p>
+          <pre>function doPost(e) {
+  var data = JSON.parse(e.postData.contents);
+  var sheet = SpreadsheetApp.getActiveSpreadsheet()
+              .getActiveSheet();
+  sheet.appendRow([
+    data.timestamp,
+    data.room,
+    data.reading,
+    data.month
+  ]);
+  return ContentService
+    .createTextOutput(
+      JSON.stringify({status: "ok"})
+    )
+    .setMimeType(ContentService.MimeType.JSON);
+}</pre>
+          <p><strong>Bước 3:</strong> Deploy → New deployment → Web app</p>
+          <p>• Execute as: <strong>Me</strong></p>
+          <p>• Who has access: <strong>Anyone</strong></p>
+          <p><strong>Bước 4:</strong> Copy URL deployment → mở file <code>index.html</code> → dán vào dòng <code>window.__SCRIPT_URL__</code></p>
+          <p><strong>Bước 5:</strong> Mỗi tháng mới, đổi <code>window.__MONTH__</code> và <code>window.__DEADLINE__</code></p>
+        </div>` : ""}
+      </div>
+
+      <div class="card">
+        <div class="btn-row" style="margin-bottom:12px">
+          ${Object.keys(BLOCKS).map(b => `<button class="admin-block-btn ${viewBlock===b?'active':''}" onclick="state.viewBlock='${b}';state.viewFloor=1;render()">Block ${b}</button>`).join("")}
+        </div>
+        <div class="btn-row" style="margin-bottom:16px">
+          ${BLOCKS[viewBlock].floors.map(f => `<button class="admin-floor-btn ${viewFloor===f?'active':''}" onclick="state.viewFloor=${f};render()">Tầng ${f}</button>`).join("")}
+        </div>
+        <div class="btn-grid-3">
+          ${rooms.map(r => `<div class="qr-card">
+            <div class="room-label">${r}</div>
+            <img src="${qrUrl(r)}" alt="QR ${r}" loading="lazy">
+            <div class="qr-hint">Quét mã để ghi số nước</div>
+          </div>`).join("")}
+        </div>
+      </div>
+
+      <button class="submit-btn purple" onclick="state.mode='printAll';render()">
+        🖨 Xem &amp; In toàn bộ QR (${getTotalRooms()} căn)
+      </button>
+    </div>`;
+}
+
+// ─── Print All ───
+function renderPrintAll() {
+  const { baseUrl } = state;
+  const allRooms = getAllRooms();
+  const qrUrl = (r) => `${QR_API}?size=200x200&data=${encodeURIComponent(baseUrl + "?room=" + r)}`;
+
+  app().innerHTML = `
+    <div class="no-print print-toolbar" style="padding:16px">
+      <button class="print-back" onclick="state.mode='admin';render()">← Quay lại</button>
+      <button class="print-btn" onclick="window.print()">🖨 In tất cả QR</button>
+    </div>
+    <div style="padding:16px">
+      <div class="print-grid">
+        ${allRooms.map(r => `<div class="print-qr">
+          <div class="room-label">${r}</div>
+          <img src="${qrUrl(r)}" alt="${r}" loading="lazy">
+          <div class="qr-hint">Quét mã để ghi số nước</div>
+        </div>`).join("")}
+      </div>
+    </div>`;
+}
+
+// ─── Init ───
+render();
+</script>
+</body>
+</html>
