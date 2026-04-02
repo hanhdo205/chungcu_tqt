@@ -241,10 +241,10 @@ function renderResident() {
       </div>
       <div class="card">
         <div class="big-label">Nhập chỉ số đồng hồ nước</div>
-        <input class="big-input" type="number" inputmode="numeric" pattern="[0-9]*" id="readingInput"
-               placeholder="VD: 1234" value="${reading}" oninput="state.reading=this.value;document.getElementById('submitBtn').disabled=!this.value.trim()" autofocus>
+        <input class="big-input" type="tel" inputmode="numeric" pattern="[0-9]*" id="readingInput"
+               placeholder="VD: 1234" value="${reading}" oninput="state.reading=this.value" autofocus>
         <div class="input-hint">Ghi đúng số trên mặt đồng hồ nước nhà bạn</div>
-        <button class="submit-btn" id="submitBtn" onclick="handleSubmit()" ${!reading.trim() ? 'disabled' : ''}>
+        <button class="submit-btn" id="submitBtn" onclick="handleSubmit()">
           ${status === "submitting" ? "Đang gửi..." : "GỬI CHỈ SỐ NƯỚC"}
         </button>
       </div>`;
@@ -322,6 +322,16 @@ function resetForm() {
 }
 
 async function handleSubmit() {
+  // Lay gia tri truc tiep tu input (khong phu thuoc state)
+  var inp = document.getElementById("readingInput");
+  if (inp) state.reading = inp.value;
+  
+  if (!state.reading || !state.reading.trim()) {
+    state.errorMsg = "Vui lòng nhập chỉ số nước!";
+    state.status = "error";
+    render();
+    return;
+  }
   const val = parseInt(state.reading.trim());
   if (isNaN(val) || val < 0) {
     state.errorMsg = "Chỉ số không hợp lệ!";
