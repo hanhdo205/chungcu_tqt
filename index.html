@@ -241,9 +241,12 @@ function renderResident() {
       <div class="card">
         <div class="big-label">Nhập chỉ số đồng hồ nước</div>
         <input class="big-input" type="tel" inputmode="numeric" pattern="[0-9]*" id="readingInput"
-               placeholder="VD: 1234" value="${reading}" autofocus>
+               placeholder="VD: 1234" value="${reading}"
+               oninput="state.reading=this.value;var b=document.getElementById('submitBtn');if(this.value.trim()){b.disabled=false;b.style.background='#1D4ED8'}else{b.disabled=true;b.style.background='#CBD5E1'}"
+               onkeyup="state.reading=this.value;var b=document.getElementById('submitBtn');if(this.value.trim()){b.disabled=false;b.style.background='#1D4ED8'}else{b.disabled=true;b.style.background='#CBD5E1'}"
+               autofocus>
         <div class="input-hint">Ghi đúng số trên mặt đồng hồ nước nhà bạn</div>
-        <button class="submit-btn" id="submitBtn" onclick="handleSubmit()" disabled>
+        <button class="submit-btn" id="submitBtn" onclick="handleSubmit()" disabled style="background:#CBD5E1">
           ${status === "submitting" ? "Đang gửi..." : "GỬI CHỈ SỐ NƯỚC"}
         </button>
       </div>`;
@@ -297,23 +300,9 @@ function renderResident() {
 
   app().innerHTML = headerHTML + `<div class="body">${bodyHTML}</div>`;
 
-  // Auto-focus input & bind events
-  const inp = document.getElementById("readingInput");
-  const btn = document.getElementById("submitBtn");
-  if (inp && btn) {
-    inp.focus();
-    // Enable/disable button khi nhap
-    var updateBtn = function() {
-      state.reading = inp.value;
-      var hasVal = inp.value.trim().length > 0;
-      btn.disabled = !hasVal;
-      btn.style.background = hasVal ? "var(--primary)" : "var(--border)";
-    };
-    inp.addEventListener("input", updateBtn);
-    inp.addEventListener("keyup", updateBtn);
-    // Neu da co gia tri (quay lai tu loi)
-    if (inp.value.trim()) updateBtn();
-  }
+  // Auto-focus input
+  var inp = document.getElementById("readingInput");
+  if (inp) inp.focus();
 }
 
 function goBack() {
